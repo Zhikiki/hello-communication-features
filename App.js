@@ -1,5 +1,5 @@
 import { StatusBar } from 'expo-status-bar';
-import { Button, Image, StyleSheet, Text, View } from 'react-native';
+import { Alert, Button, Image, StyleSheet, Text, View } from 'react-native';
 
 import { useState } from 'react';
 
@@ -7,8 +7,16 @@ import { useState } from 'react';
 // * - iports everything which is exported in package
 import * as ImagePicker from 'expo-image-picker';
 
+// Import Media Liprary package
+import * as MediaLibrary from 'expo-media-library';
+
+// importing packages anabling Geolocation communication features
+import * as Location from 'expo-location';
+import MapView from 'react-native-maps';
+
 const App = () => {
   const [image, setImage] = useState(null);
+  const [location, setLocation] = useState(null);
 
   /**
    * this function
@@ -49,8 +57,29 @@ const App = () => {
     if (permissions?.granted) {
       let result = await ImagePicker.launchCameraAsync();
 
-      if (!result.canceled) setImage(result.assets[0]);
-      else setImage(null);
+      if (!result.canceled) {
+        let mediaLibraryPermissions =
+          await MediaLibrary.requestPermissionsAsync();
+        if (mediaLibraryPermissions?.granted)
+          await MediaLibrary.saveToLibraryAsync(result.assets[0].uri);
+        setImage(result.assets[0]);
+      } else setImage(null);
+    }
+  };
+  /**Function make avaliable to send location
+   * Location.requestForegroundPermissionsAsync() - request permission to access the device’s location
+   * if permissions.granted = true we get access to read location data
+   * Location.getCurrentPositionAsync() - returns an object with coordiantes of user's location
+   */
+
+  const getLocation = async () => {
+    let permissions = await Location.requestForegroundPermissionsAsync();
+
+    if (permissions?.granted) {
+      const location = await Location.getCurrentPositionAsync({});
+      setLocation(location);
+    } else {
+      Alert.alert("Permissions to read location aren't granted");
     }
   };
 
@@ -65,6 +94,18 @@ const App = () => {
       <Button title='Pick the image from the library' onPress={pickImage} />
 
       <Button title='Take a photo' onPress={takePhoto} />
+      {location && (
+        <MapView
+          style={{ width: 300, height: 300 }}
+          region={{
+            latitude: location.coords.latitude,
+            longitude: location.coords.longitude,
+            latitudeDelta: 0.0922, // determine the size of the map
+            longitudeDelta: 0.0421, // determine the size of the map
+          }}
+        />
+      )}
+      <Button title='Get my location' onPress={getLocation} />
     </View>
   );
 };
